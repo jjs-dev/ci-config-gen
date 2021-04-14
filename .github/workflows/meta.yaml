@@ -12,6 +12,10 @@ jobs:
     steps:
     - name: Fetch sources
       uses: actions/checkout@v2
+    - name: Install golang
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.16.3
     - name: Install ci-config-gen
       run: go install -v github.com/jjs-dev/ci-config-gen@HEAD
     - name: Run co-config-gen
