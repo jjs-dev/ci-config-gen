@@ -23,6 +23,8 @@ type EmptyStruct struct{}
 
 type Job struct {
 	Name   string            `yaml:",omitempty"`
+	If     string            `yaml:",omitempty"`
+	Needs  string            `yaml:",omitempty"`
 	Env    map[string]string `yaml:",omitempty"`
 	RunsOn string            `yaml:"runs-on"`
 	Steps  []Step
@@ -31,6 +33,7 @@ type Job struct {
 type Step struct {
 	Id   string            `yaml:",omitempty"`
 	Name string            `yaml:",omitempty"`
+	If   string            `yaml:",omitempty"`
 	Uses string            `yaml:",omitempty"`
 	Run  string            `yaml:",omitempty"`
 	With map[string]string `yaml:",omitempty"`

@@ -1,22 +1,23 @@
 package main
 
 import (
+	"fmt"
+	"gopkg.in/yaml.v2"
 	"log"
 	"os"
 	"path"
-
-	"gopkg.in/yaml.v2"
 )
 
 type ciConfig struct {
-	NoPublish bool `yaml:"noPublish"`
+	NoPublish    bool     `yaml:"noPublish"`
+	NoE2e        bool     `yaml:"noE2e"`
+	DockerImages []string `yaml:"dockerImages"`
 }
 
 func loadCiConfig(root string) (ciConfig, error) {
 	configPath := path.Join(root, "ci/config.yaml")
 	if !checkPathExists(configPath) {
-		log.Printf("config not found at %s, using default", configPath)
-		return ciConfig{}, nil
+		log.Fatalf("config not exists at %s", configPath)
 	}
 	configData, err := os.ReadFile(configPath)
 	if err != nil {
@@ -24,5 +25,16 @@ func loadCiConfig(root string) (ciConfig, error) {
 	}
 	config := ciConfig{}
 	err = yaml.Unmarshal(configData, &config)
-	return config, err
+
+	if err != nil {
+		return ciConfig{}, err
+	}
+
+	if !config.NoPublish {
+		if len(config.DockerImages) == 0 {
+			return ciConfig{}, fmt.Errorf("publish enabled, but no images listed")
+		}
+	}
+
+	return config, nil
 }

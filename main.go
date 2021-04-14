@@ -24,19 +24,22 @@ func preprocessWorkflow(workflow actions.Workflow) actions.Workflow {
 	return workflow
 }
 
-func writeWorkflow(out string, workflow actions.Workflow) {
+func emitFile(out string, relName string, data []byte) {
+	fullPath := path.Join(out, relName)
+	err := os.WriteFile(fullPath, data, 0o755)
+	if err != nil {
+		log.Fatalf("failed to write %s: %v", relName, err)
+	}
+}
 
+func writeWorkflow(out string, workflow actions.Workflow) {
+	alert := "# GENERATED FILE DO NOT EDIT\n"
 	y, err := yaml.Marshal(preprocessWorkflow(workflow))
+	data := append([]byte(alert), y...)
 	if err != nil {
 		log.Fatalf("failed to serialize workflow %v", err)
 	}
-
-	workflowPath :=
-		path.Join(out, ".github/workflows", fmt.Sprintf("%s.yaml", workflow.Name))
-	err = os.WriteFile(workflowPath, y, 0o755)
-	if err != nil {
-		log.Fatalf("failed to write workflow %s: %v", workflowPath, err)
-	}
+	emitFile(out, fmt.Sprintf(".github/workflows/%s.yaml", workflow.Name), data)
 }
 
 func checkPathExists(path string) bool {
@@ -76,13 +79,15 @@ func main() {
 		perLanguageJobs = append(perLanguageJobs, makeGoJobs())
 	}
 
-	ciWorkflow := makeCiWorkflow(perLanguageJobs)
+	ciWorkflow := makeCiWorkflow(perLanguageJobs, config, *repoRoot)
 	writeWorkflow(*out, ciWorkflow)
 
 	if !config.NoPublish {
 		log.Println("Generating publish workflow")
-		publishWorkflow := makePublishWorkflow(*repoRoot)
+		publishWorkflow := makePublishWorkflow(*repoRoot, config)
 		writeWorkflow(*out, publishWorkflow)
+		script := generatePublishImageScript(config)
+		emitFile(*out, "ci/publish-images.sh", []byte(script))
 	}
 }
 
@@ -119,7 +124,66 @@ func makeMetaWorkflow() actions.Workflow {
 	}
 }
 
-func makeCiWorkflow(jobsets []JobSet) actions.Workflow {
+func makeCiE2eJob(root string) (actions.Job, actions.Job) {
+	buildSteps := []actions.Step{
+		makeCheckoutStep(),
+	}
+	if hasRust(root) {
+		buildSteps = append(buildSteps, makeRustCacheStep())
+	}
+	buildSteps = append(buildSteps, actions.Step{
+		Name: "Build e2e artifacts",
+		Run:  "bash ci/e2e-build.sh",
+	}, actions.Step{
+		Name: "Upload e2e artifacts",
+		Uses: "actions/upload-artifact@v2",
+		With: map[string]string{
+			"name":           "e2e-artifacts",
+			"path":           "e2e-artifacts",
+			"retention-days": "2",
+		},
+	})
+
+	build := actions.Job{
+		RunsOn: actions.UbuntuRunner,
+		Steps:  buildSteps,
+		Env: map[string]string{
+			"DOCKER_BUILDKIT": "1",
+		},
+	}
+	run := actions.Job{
+		RunsOn: actions.UbuntuRunner,
+		Needs:  "e2e-build",
+		Steps: []actions.Step{
+			makeCheckoutStep(),
+			{
+				Name: "Download e2e artifacts",
+				Uses: "actions/download-artifact@v2",
+				With: map[string]string{
+					"name": "e2e-artifacts",
+					"path": "e2e-artifacts",
+				},
+			},
+			{
+				Name: "Execute tests",
+				Run:  "bash ci/e2e-run.sh",
+			},
+			{
+				Name: "Upload logs",
+				Uses: "actions/upload-artifact@v2",
+				With: map[string]string{
+					"name":           "e2e-logs",
+					"path":           "e2e-logs",
+					"retention-days": "2",
+				},
+			},
+		},
+	}
+
+	return build, run
+}
+
+func makeCiWorkflow(jobsets []JobSet, config ciConfig, repoRoot string) actions.Workflow {
 	w := actions.Workflow{
 		Name: "ci",
 		On: actions.Trigger{
@@ -146,32 +210,16 @@ func makeCiWorkflow(jobsets []JobSet) actions.Workflow {
 		},
 	}
 
+	if !config.NoE2e {
+		e2eBuild, e2eRun := makeCiE2eJob(repoRoot)
+		w.Jobs["e2e-build"] = e2eBuild
+		w.Jobs["e2e-run"] = e2eRun
+	}
+
 	for _, js := range jobsets {
 		for _, job := range js.ci {
 			w.Jobs[job.Name] = job
 		}
-	}
-
-	return w
-}
-
-func makePublishWorkflow(root string) actions.Workflow {
-
-	publishJob := actions.Job{
-		RunsOn: actions.UbuntuRunner,
-	}
-
-	w := actions.Workflow{
-		Name: "publish",
-		On: actions.Trigger{
-			PullRequest: actions.EmptyStruct{},
-			Push: actions.PushTrigger{
-				Branches: []string{"staging", "trying", "master", "force-publish"},
-			},
-		},
-		Jobs: map[string]actions.Job{
-			"publish": publishJob,
-		},
 	}
 
 	return w
