@@ -11,9 +11,12 @@ jobs:
     name: lint
     runs-on: ubuntu-20.04
     steps:
+    - name: Fetch sources
+      uses: actions/checkout@v2
     - name: Run linter
       uses: golangci/golangci-lint-action@v2
       with:
+        args: --enable=gofmt
         version: latest
   misspell:
     runs-on: ubuntu-20.04
@@ -25,3 +28,11 @@ jobs:
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         locale: US
+  test:
+    name: test
+    runs-on: ubuntu-20.04
+    steps:
+    - name: Fetch sources
+      uses: actions/checkout@v2
+    - name: Run tests
+      run: go test .
