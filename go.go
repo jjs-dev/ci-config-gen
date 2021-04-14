@@ -28,12 +28,14 @@ func makeGoJobs() JobSet {
 				RunsOn: actions.UbuntuRunner,
 				Steps: []actions.Step{
 					makeCheckoutStep(),
+					makeSetupGoStep(),
 					{
 						Name: "Run linter",
 						Uses: "golangci/golangci-lint-action@v2",
 						With: map[string]string{
-							"version": "latest",
-							"args":    "--enable=gofmt",
+							"version":              "latest",
+							"args":                 "--enable=gofmt",
+							"skip-go-installation": "false",
 						},
 					},
 				},
