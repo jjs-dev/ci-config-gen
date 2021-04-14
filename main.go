@@ -99,6 +99,7 @@ func makeMetaWorkflow() actions.Workflow {
 				RunsOn: actions.UbuntuRunner,
 				Steps: []actions.Step{
 					makeCheckoutStep(),
+					makeSetupGoStep(),
 					{
 						Run:  "go install -v github.com/jjs-dev/ci-config-gen@HEAD",
 						Name: "Install ci-config-gen",
