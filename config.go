@@ -1,25 +1,22 @@
 package main
 
 import (
-	"gopkg.in/yaml.v2"
+	"log"
 	"os"
 	"path"
+
+	"gopkg.in/yaml.v2"
 )
 
 type ciConfig struct {
-	Publish bool
-}
-
-func newDefaultCiConfig() ciConfig {
-	return ciConfig{
-		Publish: true,
-	}
+	NoPublish bool `yaml:"noPublish"`
 }
 
 func loadCiConfig(root string) (ciConfig, error) {
 	configPath := path.Join(root, "ci/config.yaml")
 	if !checkPathExists(configPath) {
-		return newDefaultCiConfig(), nil
+		log.Printf("config not found at %s, using default", configPath)
+		return ciConfig{}, nil
 	}
 	configData, err := os.ReadFile(configPath)
 	if err != nil {

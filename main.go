@@ -61,6 +61,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)
 	}
+	log.Printf("loaded config: %+v", config)
 
 	metaWorkflow := makeMetaWorkflow()
 	writeWorkflow(*out, metaWorkflow)
@@ -78,7 +79,7 @@ func main() {
 	ciWorkflow := makeCiWorkflow(perLanguageJobs)
 	writeWorkflow(*out, ciWorkflow)
 
-	if config.Publish {
+	if !config.NoPublish {
 		log.Println("Generating publish workflow")
 		publishWorkflow := makePublishWorkflow(*repoRoot)
 		writeWorkflow(*out, publishWorkflow)
