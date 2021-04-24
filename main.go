@@ -101,11 +101,20 @@ func main() {
 func makeMetaWorkflow(bc *bors.BorsConfig, useLocal bool) actions.Workflow {
 	bc.AddJob("check-ci-config")
 
-	var genLocation string
+	var fetchGenerator actions.Step
+	var generatorLocation string
 	if useLocal {
-		genLocation = "."
+		fetchGenerator = actions.Step{
+			Name: "No-op",
+			Run:  "echo OK",
+		}
+		generatorLocation = "."
 	} else {
-		genLocation = "github.com/jjs-dev/ci-config-gen@HEAD"
+		fetchGenerator = actions.Step{
+			Name: "Fetch generator sources",
+			Run:  "git clone https://github.com/jjs-dev/ci-config-gen ./gen",
+		}
+		generatorLocation = "./gen"
 	}
 
 	return actions.Workflow{
@@ -123,8 +132,9 @@ func makeMetaWorkflow(bc *bors.BorsConfig, useLocal bool) actions.Workflow {
 				Steps: []actions.Step{
 					makeCheckoutStep(),
 					makeSetupGoStep(),
+					fetchGenerator,
 					{
-						Run:  fmt.Sprintf("go install -v %s", genLocation),
+						Run:  fmt.Sprintf("go install -v %s", generatorLocation),
 						Name: "Install ci-config-gen",
 					},
 					{
