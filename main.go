@@ -134,7 +134,7 @@ func makeMetaWorkflow(bc *bors.BorsConfig, useLocal bool) actions.Workflow {
 					makeSetupGoStep(),
 					fetchGenerator,
 					{
-						Run:  fmt.Sprintf("go install -v %s", generatorLocation),
+						Run:  fmt.Sprintf("cd %s && go install -v .", generatorLocation),
 						Name: "Install ci-config-gen",
 					},
 					{

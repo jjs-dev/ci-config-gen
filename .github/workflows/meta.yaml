@@ -21,7 +21,7 @@ jobs:
     - name: No-op
       run: echo OK
     - name: Install ci-config-gen
-      run: go install -v .
+      run: cd . && go install -v .
     - name: Run co-config-gen
       run: ci-config-gen --repo-root .
     - name: Verify CI configuration is up-to-date
