@@ -19,7 +19,7 @@ jobs:
       with:
         go-version: 1.16.3
     - name: Install ci-config-gen
-      run: go install -v github.com/jjs-dev/ci-config-gen@HEAD
+      run: go install -v .
     - name: Run co-config-gen
       run: ci-config-gen --repo-root .
     - name: Verify CI configuration is up-to-date

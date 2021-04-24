@@ -67,7 +67,7 @@ func main() {
 	borsConfig.ApplyDefaults()
 	borsConfig.Timeout = config.BuildTimeout * 60
 
-	metaWorkflow := makeMetaWorkflow(borsConfig)
+	metaWorkflow := makeMetaWorkflow(borsConfig, config.InternalHackForGenerator)
 	writeWorkflow(*out, metaWorkflow)
 
 	perLanguageJobs := make([]JobSet, 0)
@@ -98,8 +98,16 @@ func main() {
 	emitFile(*out, "bors.toml", borsConfigBytes)
 }
 
-func makeMetaWorkflow(bc *bors.BorsConfig) actions.Workflow {
+func makeMetaWorkflow(bc *bors.BorsConfig, useLocal bool) actions.Workflow {
 	bc.AddJob("check-ci-config")
+
+	var genLocation string
+	if useLocal {
+		genLocation = "."
+	} else {
+		genLocation = "github.com/jjs-dev/ci-config-gen@HEAD"
+	}
+
 	return actions.Workflow{
 		Name: "meta",
 		On: actions.Trigger{
@@ -116,7 +124,7 @@ func makeMetaWorkflow(bc *bors.BorsConfig) actions.Workflow {
 					makeCheckoutStep(),
 					makeSetupGoStep(),
 					{
-						Run:  "go install -v github.com/jjs-dev/ci-config-gen@HEAD",
+						Run:  fmt.Sprintf("go install -v %s", genLocation),
 						Name: "Install ci-config-gen",
 					},
 					{

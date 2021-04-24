@@ -7,7 +7,7 @@ import (
 )
 
 func TestMetaWorkflowValid(t *testing.T) {
-	meta := makeMetaWorkflow(&bors.BorsConfig{})
+	meta := makeMetaWorkflow(&bors.BorsConfig{}, false)
 	err := meta.Validate()
 	assert.NilError(t, err)
 }
