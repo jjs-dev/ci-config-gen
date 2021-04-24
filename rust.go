@@ -60,8 +60,8 @@ cargo udeps
 	return JobSet{
 		ci: []actions.Job{
 			{
-				Name:   "rustfmt",
-				RunsOn: actions.UbuntuRunner,
+				Name:    "rustfmt",
+				RunsOn:  actions.UbuntuRunner,
 				Timeout: config.JobTimeout,
 				Steps: []actions.Step{
 					makeCheckoutStep(),
@@ -77,8 +77,8 @@ cargo udeps
 				},
 			},
 			{
-				Name:   "rust-unit-tests",
-				RunsOn: actions.UbuntuRunner,
+				Name:    "rust-unit-tests",
+				RunsOn:  actions.UbuntuRunner,
 				Timeout: config.JobTimeout,
 				Steps: []actions.Step{
 					makeCheckoutStep(),
@@ -93,8 +93,8 @@ cargo udeps
 				},
 			},
 			{
-				Name:   "rust-unused-deps",
-				RunsOn: actions.UbuntuRunner,
+				Name:    "rust-unused-deps",
+				RunsOn:  actions.UbuntuRunner,
 				Timeout: config.JobTimeout,
 				Steps: []actions.Step{
 					makeCheckoutStep(),
@@ -121,8 +121,8 @@ cargo udeps
 				},
 			},
 			{
-				Name:   "rust-cargo-deny",
-				RunsOn: actions.UbuntuRunner,
+				Name:    "rust-cargo-deny",
+				RunsOn:  actions.UbuntuRunner,
 				Timeout: config.JobTimeout,
 				Steps: []actions.Step{
 					makeCheckoutStep(),
@@ -136,8 +136,8 @@ cargo udeps
 				},
 			},
 			{
-				Name: "rust-lint",
-				RunsOn: actions.UbuntuRunner,
+				Name:    "rust-lint",
+				RunsOn:  actions.UbuntuRunner,
 				Timeout: config.JobTimeout,
 				Steps: []actions.Step{
 					makeCheckoutStep(),
@@ -146,7 +146,7 @@ cargo udeps
 						Uses: "actions-rs/cargo@v1",
 						With: map[string]string{
 							"command": "clippy",
-							"args": "--workspace -- -Dwarnings",
+							"args":    "--workspace -- -Dwarnings",
 						},
 					},
 				},

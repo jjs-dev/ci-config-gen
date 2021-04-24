@@ -9,9 +9,9 @@ import (
 )
 
 type ciConfig struct {
-	NoPublish           bool     `yaml:"noPublish"`
-	NoE2e               bool     `yaml:"noE2e"`
-	DockerImages        []string `yaml:"dockerImages"`
+	NoPublish    bool     `yaml:"noPublish"`
+	NoE2e        bool     `yaml:"noE2e"`
+	DockerImages []string `yaml:"dockerImages"`
 	BuildTimeout int      `yaml:"buildTimeoutMinutes"`
 	JobTimeout   int      `yaml:"jobTimeoutMinutes"`
 }
