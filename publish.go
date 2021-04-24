@@ -22,7 +22,7 @@ else
   echo "unknown GITHUB_REF: $GITHUB_REF"
   exit 1
 fi
-echo ${{ secrets.GHCR_TOKEN }} | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin`
+echo $GITHUB_TOKEN | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin`
 	lines = append(lines, header)
 
 	for _, image := range config.DockerImages {
@@ -38,6 +38,9 @@ func makePublishWorkflow(root string, config ciConfig) actions.Workflow {
 		RunsOn:  actions.UbuntuRunner,
 		If:      "github.event_name == 'push'",
 		Timeout: config.JobTimeout,
+		Env: map[string]string{
+			"GITHUB_TOKEN": "${{ secrets.GITHUB_TOKEN }}",
+		},
 		Steps: []actions.Step{
 			makeCheckoutStep(),
 			{
