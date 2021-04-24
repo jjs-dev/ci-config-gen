@@ -4,7 +4,7 @@ import "github.com/pelletier/go-toml"
 
 type BorsConfig struct {
 	DeleteMergedBranches bool     `toml:"delete-merged-branches"`
-	Timeout              int      `toml:"timeout-seconds"`
+	Timeout              int      `toml:"timeout-sec"`
 	Status               []string `toml:"status"`
 }
 

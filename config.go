@@ -9,11 +9,11 @@ import (
 )
 
 type ciConfig struct {
-	NoPublish               bool     `yaml:"noPublish"`
-	NoE2e                   bool     `yaml:"noE2e"`
-	DockerImages            []string `yaml:"dockerImages"`
-	BuildTimeout            int      `yaml:"buildTimeoutMinutes"`
-	JobTimeout              int      `yaml:"jobTimeoutMinutes"`
+	NoPublish                bool     `yaml:"noPublish"`
+	NoE2e                    bool     `yaml:"noE2e"`
+	DockerImages             []string `yaml:"dockerImages"`
+	BuildTimeout             int      `yaml:"buildTimeoutMinutes"`
+	JobTimeout               int      `yaml:"jobTimeoutMinutes"`
 	InternalHackForGenerator bool     `yaml:"internalHackForGenerator"`
 }
 
