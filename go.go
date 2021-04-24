@@ -20,12 +20,13 @@ func makeSetupGoStep() actions.Step {
 	}
 }
 
-func makeGoJobs() JobSet {
+func makeGoJobs(config ciConfig) JobSet {
 	return JobSet{
 		ci: []actions.Job{
 			{
-				Name:   "lint",
+				Name:   "go-lint",
 				RunsOn: actions.UbuntuRunner,
+				Timeout: config.JobTimeout,
 				Steps: []actions.Step{
 					makeCheckoutStep(),
 					makeSetupGoStep(),
@@ -41,8 +42,9 @@ func makeGoJobs() JobSet {
 				},
 			},
 			{
-				Name:   "test",
+				Name:   "go-test",
 				RunsOn: actions.UbuntuRunner,
+				Timeout: config.JobTimeout,
 				Steps: []actions.Step{
 					makeCheckoutStep(),
 					makeSetupGoStep(),

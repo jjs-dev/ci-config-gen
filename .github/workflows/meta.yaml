@@ -10,6 +10,7 @@ name: meta
 jobs:
   check-ci-config:
     runs-on: ubuntu-20.04
+    timeout-minutes: 1
     steps:
     - name: Fetch sources
       uses: actions/checkout@v2

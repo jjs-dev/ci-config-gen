@@ -37,6 +37,7 @@ func makePublishWorkflow(root string, config ciConfig) actions.Workflow {
 	publishJob := actions.Job{
 		RunsOn: actions.UbuntuRunner,
 		If:     "github.event_name == 'push'",
+		Timeout: config.JobTimeout,
 		Steps: []actions.Step{
 			makeCheckoutStep(),
 			{

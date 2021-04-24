@@ -8,9 +8,10 @@ name: ci
     - trying
     - master
 jobs:
-  lint:
-    name: lint
+  go-lint:
+    name: go-lint
     runs-on: ubuntu-20.04
+    timeout-minutes: 5
     steps:
     - name: Fetch sources
       uses: actions/checkout@v2
@@ -24,19 +25,10 @@ jobs:
         args: --enable=gofmt
         skip-go-installation: "false"
         version: latest
-  misspell:
+  go-test:
+    name: go-test
     runs-on: ubuntu-20.04
-    steps:
-    - name: Fetch sources
-      uses: actions/checkout@v2
-    - name: run spellcheck
-      uses: reviewdog/action-misspell@v1
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        locale: US
-  test:
-    name: test
-    runs-on: ubuntu-20.04
+    timeout-minutes: 5
     steps:
     - name: Fetch sources
       uses: actions/checkout@v2
@@ -46,3 +38,14 @@ jobs:
         go-version: 1.16.3
     - name: Run tests
       run: go test .
+  misspell:
+    runs-on: ubuntu-20.04
+    timeout-minutes: 2
+    steps:
+    - name: Fetch sources
+      uses: actions/checkout@v2
+    - name: run spellcheck
+      uses: reviewdog/action-misspell@v1
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        locale: US

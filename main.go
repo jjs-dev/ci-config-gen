@@ -3,23 +3,20 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/jjs-dev/ci-config-gen/actions"
-	"gopkg.in/yaml.v2"
 	"log"
 	"os"
 	"path"
+
+	"github.com/jjs-dev/ci-config-gen/actions"
+	"github.com/jjs-dev/ci-config-gen/bors"
+	"gopkg.in/yaml.v2"
 )
 
-func validateWorkflow(workflow actions.Workflow) {
-	for _, job := range workflow.Jobs {
-		if job.RunsOn == "" {
-			log.Fatalf("In workflow %s a job has missing runs-on", workflow.Name)
-		}
-	}
-}
-
 func preprocessWorkflow(workflow actions.Workflow) actions.Workflow {
-	validateWorkflow(workflow)
+	err := workflow.Validate()
+	if err != nil {
+		log.Fatalf("Workflow %s in invalid: %v", workflow.Name, err)
+	}
 	// no modifications currently
 	return workflow
 }
@@ -66,20 +63,24 @@ func main() {
 	}
 	log.Printf("loaded config: %+v", config)
 
-	metaWorkflow := makeMetaWorkflow()
+	borsConfig := &bors.BorsConfig{}
+	borsConfig.ApplyDefaults()
+	borsConfig.Timeout = config.BuildTimeout * 60
+
+	metaWorkflow := makeMetaWorkflow(borsConfig)
 	writeWorkflow(*out, metaWorkflow)
 
 	perLanguageJobs := make([]JobSet, 0)
 	if hasRust(*repoRoot) {
 		log.Println("Generating rust jobs")
-		perLanguageJobs = append(perLanguageJobs, makeRustJobs())
+		perLanguageJobs = append(perLanguageJobs, makeRustJobs(config))
 	}
 	if hasGo(*repoRoot) {
 		log.Println("Generating golang jobs")
-		perLanguageJobs = append(perLanguageJobs, makeGoJobs())
+		perLanguageJobs = append(perLanguageJobs, makeGoJobs(config))
 	}
 
-	ciWorkflow := makeCiWorkflow(perLanguageJobs, config, *repoRoot)
+	ciWorkflow := makeCiWorkflow(perLanguageJobs, config, *repoRoot, borsConfig)
 	writeWorkflow(*out, ciWorkflow)
 
 	if !config.NoPublish {
@@ -89,9 +90,16 @@ func main() {
 		script := generatePublishImageScript(config)
 		emitFile(*out, "ci/publish-images.sh", []byte(script))
 	}
+	log.Println("Generating bors config")
+	borsConfigBytes, err := borsConfig.Serialize()
+	if err != nil {
+		log.Fatal(err)
+	}
+	emitFile(*out, "bors.toml", borsConfigBytes)
 }
 
-func makeMetaWorkflow() actions.Workflow {
+func makeMetaWorkflow(bc *bors.BorsConfig) actions.Workflow {
+	bc.AddJob("check-ci-config")
 	return actions.Workflow{
 		Name: "meta",
 		On: actions.Trigger{
@@ -102,7 +110,8 @@ func makeMetaWorkflow() actions.Workflow {
 		},
 		Jobs: map[string]actions.Job{
 			"check-ci-config": {
-				RunsOn: actions.UbuntuRunner,
+				RunsOn:  actions.UbuntuRunner,
+				Timeout: 1,
 				Steps: []actions.Step{
 					makeCheckoutStep(),
 					makeSetupGoStep(),
@@ -122,9 +131,10 @@ func makeMetaWorkflow() actions.Workflow {
 			},
 		},
 	}
+
 }
 
-func makeCiE2eJob(root string) (actions.Job, actions.Job) {
+func makeCiE2eJob(root string, config ciConfig) (actions.Job, actions.Job) {
 	buildSteps := []actions.Step{
 		makeCheckoutStep(),
 	}
@@ -145,15 +155,17 @@ func makeCiE2eJob(root string) (actions.Job, actions.Job) {
 	})
 
 	build := actions.Job{
-		RunsOn: actions.UbuntuRunner,
-		Steps:  buildSteps,
+		RunsOn:  actions.UbuntuRunner,
+		Steps:   buildSteps,
+		Timeout: config.JobTimeout,
 		Env: map[string]string{
 			"DOCKER_BUILDKIT": "1",
 		},
 	}
 	run := actions.Job{
-		RunsOn: actions.UbuntuRunner,
-		Needs:  "e2e-build",
+		RunsOn:  actions.UbuntuRunner,
+		Needs:   "e2e-build",
+		Timeout: config.JobTimeout,
 		Steps: []actions.Step{
 			makeCheckoutStep(),
 			{
@@ -183,7 +195,7 @@ func makeCiE2eJob(root string) (actions.Job, actions.Job) {
 	return build, run
 }
 
-func makeCiWorkflow(jobsets []JobSet, config ciConfig, repoRoot string) actions.Workflow {
+func makeCiWorkflow(jobsets []JobSet, config ciConfig, repoRoot string, bc *bors.BorsConfig) actions.Workflow {
 	w := actions.Workflow{
 		Name: "ci",
 		On: actions.Trigger{
@@ -194,7 +206,8 @@ func makeCiWorkflow(jobsets []JobSet, config ciConfig, repoRoot string) actions.
 		},
 		Jobs: map[string]actions.Job{
 			"misspell": {
-				RunsOn: actions.UbuntuRunner,
+				RunsOn:  actions.UbuntuRunner,
+				Timeout: 2,
 				Steps: []actions.Step{
 					makeCheckoutStep(),
 					{
@@ -211,13 +224,16 @@ func makeCiWorkflow(jobsets []JobSet, config ciConfig, repoRoot string) actions.
 	}
 
 	if !config.NoE2e {
-		e2eBuild, e2eRun := makeCiE2eJob(repoRoot)
+		e2eBuild, e2eRun := makeCiE2eJob(repoRoot, config)
+		bc.AddJob("e2e-build")
+		bc.AddJob("e2e-run")
 		w.Jobs["e2e-build"] = e2eBuild
 		w.Jobs["e2e-run"] = e2eRun
 	}
 
 	for _, js := range jobsets {
 		for _, job := range js.ci {
+			bc.AddJob(job.Name)
 			w.Jobs[job.Name] = job
 		}
 	}

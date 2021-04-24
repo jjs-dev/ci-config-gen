@@ -45,7 +45,7 @@ func makeInstallTooclhainStep(channel string) actions.Step {
 	}
 }
 
-func makeRustJobs() JobSet {
+func makeRustJobs(config ciConfig) JobSet {
 
 	compileCargoUdeps := `
 cargo install cargo-udeps --locked --version %s
@@ -62,6 +62,7 @@ cargo udeps
 			{
 				Name:   "rustfmt",
 				RunsOn: actions.UbuntuRunner,
+				Timeout: config.JobTimeout,
 				Steps: []actions.Step{
 					makeCheckoutStep(),
 					makeInstallTooclhainStep("nightly"),
@@ -78,6 +79,7 @@ cargo udeps
 			{
 				Name:   "rust-unit-tests",
 				RunsOn: actions.UbuntuRunner,
+				Timeout: config.JobTimeout,
 				Steps: []actions.Step{
 					makeCheckoutStep(),
 					makeRustCacheStep(),
@@ -93,6 +95,7 @@ cargo udeps
 			{
 				Name:   "rust-unused-deps",
 				RunsOn: actions.UbuntuRunner,
+				Timeout: config.JobTimeout,
 				Steps: []actions.Step{
 					makeCheckoutStep(),
 					makeInstallTooclhainStep("nightly"),
@@ -120,6 +123,7 @@ cargo udeps
 			{
 				Name:   "rust-cargo-deny",
 				RunsOn: actions.UbuntuRunner,
+				Timeout: config.JobTimeout,
 				Steps: []actions.Step{
 					makeCheckoutStep(),
 					{
@@ -134,6 +138,7 @@ cargo udeps
 			{
 				Name: "rust-lint",
 				RunsOn: actions.UbuntuRunner,
+				Timeout: config.JobTimeout,
 				Steps: []actions.Step{
 					makeCheckoutStep(),
 					{

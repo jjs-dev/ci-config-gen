@@ -9,9 +9,11 @@ import (
 )
 
 type ciConfig struct {
-	NoPublish    bool     `yaml:"noPublish"`
-	NoE2e        bool     `yaml:"noE2e"`
-	DockerImages []string `yaml:"dockerImages"`
+	NoPublish           bool     `yaml:"noPublish"`
+	NoE2e               bool     `yaml:"noE2e"`
+	DockerImages        []string `yaml:"dockerImages"`
+	BuildTimeout int      `yaml:"buildTimeoutMinutes"`
+	JobTimeout   int      `yaml:"jobTimeoutMinutes"`
 }
 
 func loadCiConfig(root string) (ciConfig, error) {
@@ -34,6 +36,12 @@ func loadCiConfig(root string) (ciConfig, error) {
 		if len(config.DockerImages) == 0 {
 			return ciConfig{}, fmt.Errorf("publish enabled, but no images listed")
 		}
+	}
+	if config.BuildTimeout == 0 {
+		return ciConfig{}, fmt.Errorf("build timeout not specified")
+	}
+	if config.JobTimeout == 0 {
+		config.JobTimeout = config.BuildTimeout
 	}
 
 	return config, nil

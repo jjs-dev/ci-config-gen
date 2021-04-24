@@ -1,5 +1,7 @@
 package actions
 
+import "fmt"
+
 const (
 	UbuntuRunner = "ubuntu-20.04"
 )
@@ -8,6 +10,19 @@ type Workflow struct {
 	Name string
 	On   Trigger
 	Jobs map[string]Job
+}
+
+func (w Workflow) Validate() error {
+	for jobName, job := range w.Jobs {
+		jobErr := job.Validate()
+		if job.Name != "" && job.Name != jobName {
+			jobErr = fmt.Errorf("job name mismatch: named in map as %s, but name is %s", jobName, job.Name)
+		}
+		if jobErr != nil {
+			return fmt.Errorf("invalid job %s: %w", jobName, jobErr)
+		}
+	}
+	return nil
 }
 
 type Trigger struct {
@@ -22,12 +37,23 @@ type PushTrigger struct {
 type EmptyStruct struct{}
 
 type Job struct {
-	Name   string            `yaml:",omitempty"`
-	If     string            `yaml:",omitempty"`
-	Needs  string            `yaml:",omitempty"`
-	Env    map[string]string `yaml:",omitempty"`
-	RunsOn string            `yaml:"runs-on"`
-	Steps  []Step
+	Name    string            `yaml:",omitempty"`
+	If      string            `yaml:",omitempty"`
+	Needs   string            `yaml:",omitempty"`
+	Env     map[string]string `yaml:",omitempty"`
+	RunsOn  string            `yaml:"runs-on"`
+	Timeout int               `yaml:"timeout-minutes"`
+	Steps   []Step            `yaml:"steps"`
+}
+
+func (j Job) Validate() error {
+	if j.RunsOn == "" {
+		return fmt.Errorf("missing runs-on")
+	}
+	if j.Timeout == 0 {
+		return fmt.Errorf("missing timeout-minutes")
+	}
+	return nil
 }
 
 type Step struct {
