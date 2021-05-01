@@ -27,7 +27,7 @@ func MakeSetupGoStep() actions.Step {
 	}
 }
 
-func (langGo) Make(config config.CiConfig) JobSet {
+func (langGo) Make(_repoRoot string, config config.CiConfig) JobSet {
 	return JobSet{
 		CI: []actions.Job{
 			{

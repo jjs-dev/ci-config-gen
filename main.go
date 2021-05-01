@@ -241,7 +241,7 @@ func makeCiWorkflow(langs []languages.Language, config config.CiConfig, repoRoot
 	for _, lang := range langs {
 		if lang.Used(repoRoot) {
 			log.Printf("Generating %s CI jobs", lang.Name())
-			perLanguageJobs = append(perLanguageJobs, lang.Make(config))
+			perLanguageJobs = append(perLanguageJobs, lang.Make(repoRoot, config))
 		}
 	}
 
