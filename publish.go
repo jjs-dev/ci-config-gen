@@ -5,9 +5,10 @@ import (
 	"strings"
 
 	"github.com/jjs-dev/ci-config-gen/actions"
+	"github.com/jjs-dev/ci-config-gen/config"
 )
 
-func generatePublishImageScript(config ciConfig) string {
+func generatePublishImageScript(config config.CiConfig) string {
 	lines := make([]string, 0)
 	lines = append(lines, "set -euxo pipefail")
 	header := `
@@ -33,7 +34,7 @@ echo $GITHUB_TOKEN | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin`
 	return strings.Join(lines, "\n")
 }
 
-func makePublishWorkflow(root string, config ciConfig) actions.Workflow {
+func makePublishWorkflow(root string, config config.CiConfig) actions.Workflow {
 	publishJob := actions.Job{
 		RunsOn:  actions.UbuntuRunner,
 		If:      "github.event_name == 'push'",
@@ -42,7 +43,7 @@ func makePublishWorkflow(root string, config ciConfig) actions.Workflow {
 			"GITHUB_TOKEN": "${{ secrets.GITHUB_TOKEN }}",
 		},
 		Steps: []actions.Step{
-			makeCheckoutStep(),
+			actions.MakeCheckoutStep(),
 			{
 				Name: "Build artifacts",
 				Run:  "bash ci/publish-build.sh",
