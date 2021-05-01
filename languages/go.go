@@ -1,16 +1,23 @@
-package main
+package languages
 
 import (
 	"path"
 
 	"github.com/jjs-dev/ci-config-gen/actions"
+	"github.com/jjs-dev/ci-config-gen/config"
 )
 
-func hasGo(root string) bool {
+type langGo struct{}
+
+func (langGo) Name() string {
+	return "golang"
+}
+
+func (langGo) Used(root string) bool {
 	return checkPathExists(path.Join(root, "go.mod"))
 }
 
-func makeSetupGoStep() actions.Step {
+func MakeSetupGoStep() actions.Step {
 	return actions.Step{
 		Name: "Install golang",
 		Uses: "actions/setup-go@v2",
@@ -20,16 +27,16 @@ func makeSetupGoStep() actions.Step {
 	}
 }
 
-func makeGoJobs(config ciConfig) JobSet {
+func (langGo) Make(config config.CiConfig) JobSet {
 	return JobSet{
-		ci: []actions.Job{
+		CI: []actions.Job{
 			{
 				Name:    "go-lint",
 				RunsOn:  actions.UbuntuRunner,
 				Timeout: config.JobTimeout,
 				Steps: []actions.Step{
-					makeCheckoutStep(),
-					makeSetupGoStep(),
+					actions.MakeCheckoutStep(),
+					MakeSetupGoStep(),
 					{
 						Name: "Run linter",
 						Uses: "golangci/golangci-lint-action@v2",
@@ -46,8 +53,8 @@ func makeGoJobs(config ciConfig) JobSet {
 				RunsOn:  actions.UbuntuRunner,
 				Timeout: config.JobTimeout,
 				Steps: []actions.Step{
-					makeCheckoutStep(),
-					makeSetupGoStep(),
+					actions.MakeCheckoutStep(),
+					MakeSetupGoStep(),
 					{
 						Name: "Run tests",
 						Run:  "go test .",
@@ -56,4 +63,12 @@ func makeGoJobs(config ciConfig) JobSet {
 			},
 		},
 	}
+}
+
+func (langGo) MakeE2eCacheStep() (bool, actions.Step) {
+	return false, actions.Step{}
+}
+
+func makeLanguageForGo() Language {
+	return langGo{}
 }

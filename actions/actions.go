@@ -64,3 +64,10 @@ type Step struct {
 	Run  string            `yaml:",omitempty"`
 	With map[string]string `yaml:",omitempty"`
 }
+
+func MakeCheckoutStep() Step {
+	return Step{
+		Name: "Fetch sources",
+		Uses: "actions/checkout@v2",
+	}
+}

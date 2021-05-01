@@ -1,10 +1,11 @@
-package main
+package languages
 
 import (
 	"fmt"
 	"path"
 
 	"github.com/jjs-dev/ci-config-gen/actions"
+	"github.com/jjs-dev/ci-config-gen/config"
 )
 
 const (
@@ -16,7 +17,13 @@ type rustConfig struct {
 
 }*/
 
-func hasRust(root string) bool {
+type langRust struct{}
+
+func (langRust) Name() string {
+	return "rust"
+}
+
+func (langRust) Used(root string) bool {
 	return checkPathExists(path.Join(root, "Cargo.toml"))
 }
 
@@ -27,13 +34,11 @@ func makeRustCacheStep() actions.Step {
 	}
 }
 
+func (langRust) MakeE2eCacheStep() (bool, actions.Step) {
+	return true, makeRustCacheStep()
+}
+
 func makeInstallTooclhainStep(channel string) actions.Step {
-	/*name: Install Rust toolchain
-	uses: actions-rs/toolchain@v1
-	with:
-	  toolchain: nightly-2020-08-28
-	  components: clippy,rustfmt
-	  override: true*/
 	return actions.Step{
 		Name: fmt.Sprintf("Install %s toolchain", channel),
 		Uses: "actions-rs/toolchain@v1",
@@ -45,7 +50,7 @@ func makeInstallTooclhainStep(channel string) actions.Step {
 	}
 }
 
-func makeRustJobs(config ciConfig) JobSet {
+func (langRust) Make(config config.CiConfig) JobSet {
 
 	compileCargoUdeps := `
 cargo install cargo-udeps --locked --version %s
@@ -58,13 +63,13 @@ cargo udeps
 `
 
 	return JobSet{
-		ci: []actions.Job{
+		CI: []actions.Job{
 			{
 				Name:    "rustfmt",
 				RunsOn:  actions.UbuntuRunner,
 				Timeout: config.JobTimeout,
 				Steps: []actions.Step{
-					makeCheckoutStep(),
+					actions.MakeCheckoutStep(),
 					makeInstallTooclhainStep("nightly"),
 					{
 						Name: "Check formatting",
@@ -81,7 +86,7 @@ cargo udeps
 				RunsOn:  actions.UbuntuRunner,
 				Timeout: config.JobTimeout,
 				Steps: []actions.Step{
-					makeCheckoutStep(),
+					actions.MakeCheckoutStep(),
 					makeRustCacheStep(),
 					{
 						Name: "Run unit tests",
@@ -97,7 +102,7 @@ cargo udeps
 				RunsOn:  actions.UbuntuRunner,
 				Timeout: config.JobTimeout,
 				Steps: []actions.Step{
-					makeCheckoutStep(),
+					actions.MakeCheckoutStep(),
 					makeInstallTooclhainStep("nightly"),
 					makeRustCacheStep(),
 					{
@@ -125,7 +130,7 @@ cargo udeps
 				RunsOn:  actions.UbuntuRunner,
 				Timeout: config.JobTimeout,
 				Steps: []actions.Step{
-					makeCheckoutStep(),
+					actions.MakeCheckoutStep(),
 					{
 						Name: "Run cargo-deny",
 						Uses: "EmbarkStudios/cargo-deny-action@v1",
@@ -140,7 +145,7 @@ cargo udeps
 				RunsOn:  actions.UbuntuRunner,
 				Timeout: config.JobTimeout,
 				Steps: []actions.Step{
-					makeCheckoutStep(),
+					actions.MakeCheckoutStep(),
 					{
 						Name: "Run clippy",
 						Uses: "actions-rs/cargo@v1",
@@ -153,4 +158,8 @@ cargo udeps
 			},
 		},
 	}
+}
+
+func makeLanguageForRust() Language {
+	return langRust{}
 }

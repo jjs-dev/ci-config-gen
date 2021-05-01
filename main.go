@@ -9,6 +9,8 @@ import (
 
 	"github.com/jjs-dev/ci-config-gen/actions"
 	"github.com/jjs-dev/ci-config-gen/bors"
+	"github.com/jjs-dev/ci-config-gen/config"
+	"github.com/jjs-dev/ci-config-gen/languages"
 	"gopkg.in/yaml.v2"
 )
 
@@ -39,11 +41,6 @@ func writeWorkflow(out string, workflow actions.Workflow) {
 	emitFile(out, fmt.Sprintf(".github/workflows/%s.yaml", workflow.Name), data)
 }
 
-func checkPathExists(path string) bool {
-	_, err := os.Stat(path)
-	return !os.IsNotExist(err)
-}
-
 func main() {
 	repoRoot := flag.String("repo-root", "", "path to root directory of the repository to generate config for")
 	out := flag.String("output", "", "directory which will contain generated workflow files. defaults to $(repo-root)")
@@ -57,7 +54,7 @@ func main() {
 		*out = *repoRoot
 	}
 
-	config, err := loadCiConfig(*repoRoot)
+	config, err := config.Load(*repoRoot)
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)
 	}
@@ -70,17 +67,9 @@ func main() {
 	metaWorkflow := makeMetaWorkflow(borsConfig, config.InternalHackForGenerator)
 	writeWorkflow(*out, metaWorkflow)
 
-	perLanguageJobs := make([]JobSet, 0)
-	if hasRust(*repoRoot) {
-		log.Println("Generating rust jobs")
-		perLanguageJobs = append(perLanguageJobs, makeRustJobs(config))
-	}
-	if hasGo(*repoRoot) {
-		log.Println("Generating golang jobs")
-		perLanguageJobs = append(perLanguageJobs, makeGoJobs(config))
-	}
+	langs := languages.MakeLanguages()
 
-	ciWorkflow := makeCiWorkflow(perLanguageJobs, config, *repoRoot, borsConfig)
+	ciWorkflow := makeCiWorkflow(langs, config, *repoRoot, borsConfig)
 	writeWorkflow(*out, ciWorkflow)
 
 	if !config.NoPublish {
@@ -130,8 +119,8 @@ func makeMetaWorkflow(bc *bors.BorsConfig, useLocal bool) actions.Workflow {
 				RunsOn:  actions.UbuntuRunner,
 				Timeout: 1,
 				Steps: []actions.Step{
-					makeCheckoutStep(),
-					makeSetupGoStep(),
+					actions.MakeCheckoutStep(),
+					languages.MakeSetupGoStep(),
 					fetchGenerator,
 					{
 						Run:  fmt.Sprintf("cd %s && go install -v .", generatorLocation),
@@ -152,12 +141,18 @@ func makeMetaWorkflow(bc *bors.BorsConfig, useLocal bool) actions.Workflow {
 
 }
 
-func makeCiE2eJob(root string, config ciConfig) (actions.Job, actions.Job) {
+func makeCiE2eJob(root string, config config.CiConfig, languages []languages.Language) (actions.Job, actions.Job) {
 	buildSteps := []actions.Step{
-		makeCheckoutStep(),
+		actions.MakeCheckoutStep(),
 	}
-	if hasRust(root) {
-		buildSteps = append(buildSteps, makeRustCacheStep())
+	for _, lang := range languages {
+		if lang.Used(root) {
+			needsCache, cacheStep := lang.MakeE2eCacheStep()
+			if !needsCache {
+				continue
+			}
+			buildSteps = append(buildSteps, cacheStep)
+		}
 	}
 	buildSteps = append(buildSteps, actions.Step{
 		Name: "Build e2e artifacts",
@@ -185,7 +180,7 @@ func makeCiE2eJob(root string, config ciConfig) (actions.Job, actions.Job) {
 		Needs:   "e2e-build",
 		Timeout: config.JobTimeout,
 		Steps: []actions.Step{
-			makeCheckoutStep(),
+			actions.MakeCheckoutStep(),
 			{
 				Name: "Download e2e artifacts",
 				Uses: "actions/download-artifact@v2",
@@ -213,7 +208,7 @@ func makeCiE2eJob(root string, config ciConfig) (actions.Job, actions.Job) {
 	return build, run
 }
 
-func makeCiWorkflow(jobsets []JobSet, config ciConfig, repoRoot string, bc *bors.BorsConfig) actions.Workflow {
+func makeCiWorkflow(langs []languages.Language, config config.CiConfig, repoRoot string, bc *bors.BorsConfig) actions.Workflow {
 	w := actions.Workflow{
 		Name: "ci",
 		On: actions.Trigger{
@@ -227,7 +222,7 @@ func makeCiWorkflow(jobsets []JobSet, config ciConfig, repoRoot string, bc *bors
 				RunsOn:  actions.UbuntuRunner,
 				Timeout: 2,
 				Steps: []actions.Step{
-					makeCheckoutStep(),
+					actions.MakeCheckoutStep(),
 					{
 						Name: "run spellcheck",
 						Uses: "reviewdog/action-misspell@v1",
@@ -241,31 +236,29 @@ func makeCiWorkflow(jobsets []JobSet, config ciConfig, repoRoot string, bc *bors
 		},
 	}
 
+	perLanguageJobs := make([]languages.JobSet, 0)
+
+	for _, lang := range langs {
+		if lang.Used(repoRoot) {
+			log.Printf("Generating %s CI jobs", lang.Name())
+			perLanguageJobs = append(perLanguageJobs, lang.Make(config))
+		}
+	}
+
 	if !config.NoE2e {
-		e2eBuild, e2eRun := makeCiE2eJob(repoRoot, config)
+		e2eBuild, e2eRun := makeCiE2eJob(repoRoot, config, langs)
 		bc.AddJob("e2e-build")
 		bc.AddJob("e2e-run")
 		w.Jobs["e2e-build"] = e2eBuild
 		w.Jobs["e2e-run"] = e2eRun
 	}
 
-	for _, js := range jobsets {
-		for _, job := range js.ci {
+	for _, js := range perLanguageJobs {
+		for _, job := range js.CI {
 			bc.AddJob(job.Name)
 			w.Jobs[job.Name] = job
 		}
 	}
 
 	return w
-}
-
-func makeCheckoutStep() actions.Step {
-	return actions.Step{
-		Name: "Fetch sources",
-		Uses: "actions/checkout@v2",
-	}
-}
-
-type JobSet struct {
-	ci []actions.Job
 }
