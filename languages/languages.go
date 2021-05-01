@@ -12,7 +12,7 @@ type JobSet struct {
 type Language interface {
 	Name() string
 	Used(repoRoot string) bool
-	Make(config config.CiConfig) JobSet
+	Make(repoRoot string, config config.CiConfig) JobSet
 	MakeE2eCacheStep() (bool, actions.Step)
 }
 
@@ -20,5 +20,6 @@ func MakeLanguages() []Language {
 	return []Language{
 		makeLanguageForGo(),
 		makeLanguageForRust(),
+		makeLanguageForCpp(),
 	}
 }

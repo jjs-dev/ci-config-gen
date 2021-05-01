@@ -50,7 +50,7 @@ func makeInstallTooclhainStep(channel string) actions.Step {
 	}
 }
 
-func (langRust) Make(config config.CiConfig) JobSet {
+func (langRust) Make(_repoRoot string, config config.CiConfig) JobSet {
 
 	compileCargoUdeps := `
 cargo install cargo-udeps --locked --version %s
