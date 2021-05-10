@@ -1,13 +1,19 @@
 package main
 
 import (
-	"github.com/jjs-dev/ci-config-gen/bors"
-	"gotest.tools/v3/assert"
 	"testing"
+
+	"github.com/jjs-dev/ci-config-gen/bors"
+	"github.com/jjs-dev/ci-config-gen/config"
+	"gotest.tools/v3/assert"
 )
 
 func TestMetaWorkflowValid(t *testing.T) {
-	meta := makeMetaWorkflow(&bors.BorsConfig{}, false)
+	cfg := config.CiConfig{
+		Codegen:    true,
+		JobTimeout: 1,
+	}
+	meta := makeMetaWorkflow(&bors.BorsConfig{}, cfg)
 	err := meta.Validate()
 	assert.NilError(t, err)
 }

@@ -64,7 +64,7 @@ func main() {
 	borsConfig.ApplyDefaults()
 	borsConfig.Timeout = config.BuildTimeout * 60
 
-	metaWorkflow := makeMetaWorkflow(borsConfig, config.InternalHackForGenerator)
+	metaWorkflow := makeMetaWorkflow(borsConfig, config)
 	writeWorkflow(*out, metaWorkflow)
 
 	langs := languages.MakeLanguages()
@@ -87,12 +87,12 @@ func main() {
 	emitFile(*out, "bors.toml", borsConfigBytes)
 }
 
-func makeMetaWorkflow(bc *bors.BorsConfig, useLocal bool) actions.Workflow {
+func makeMetaWorkflow(bc *bors.BorsConfig, cfg config.CiConfig) actions.Workflow {
 	bc.AddJob("check-ci-config")
 
 	var fetchGenerator actions.Step
 	var generatorLocation string
-	if useLocal {
+	if cfg.InternalHackForGenerator {
 		fetchGenerator = actions.Step{
 			Name: "No-op",
 			Run:  "echo OK",
@@ -106,6 +106,48 @@ func makeMetaWorkflow(bc *bors.BorsConfig, useLocal bool) actions.Workflow {
 		generatorLocation = "./gen"
 	}
 
+	jobs := map[string]actions.Job{
+		"check-ci-config": {
+			RunsOn:  actions.UbuntuRunner,
+			Timeout: 1,
+			Steps: []actions.Step{
+				actions.MakeCheckoutStep(),
+				languages.MakeSetupGoStep(),
+				fetchGenerator,
+				{
+					Run:  fmt.Sprintf("cd %s && go install -v .", generatorLocation),
+					Name: "Install ci-config-gen",
+				},
+				{
+					Run:  "ci-config-gen --repo-root .",
+					Name: "Run co-config-gen",
+				},
+				{
+					Name: "Verify CI configuration is up-to-date",
+					Run:  "git diff --exit-code",
+				},
+			},
+		},
+	}
+
+	if cfg.Codegen {
+		jobs["check-codegen"] = actions.Job{
+			RunsOn:  actions.UbuntuRunner,
+			Timeout: cfg.JobTimeout,
+			Steps: []actions.Step{
+				actions.MakeCheckoutStep(),
+				{
+					Name: "Run top-level codegen script",
+					Run:  "bash ci/codegen.sh",
+				},
+				{
+					Name: "Verify generated code is up-to-date",
+					Run:  "git diff --exit-code",
+				},
+			},
+		}
+	}
+
 	return actions.Workflow{
 		Name: "meta",
 		On: actions.Trigger{
@@ -114,29 +156,7 @@ func makeMetaWorkflow(bc *bors.BorsConfig, useLocal bool) actions.Workflow {
 				Branches: []string{"staging", "trying", "master"},
 			},
 		},
-		Jobs: map[string]actions.Job{
-			"check-ci-config": {
-				RunsOn:  actions.UbuntuRunner,
-				Timeout: 1,
-				Steps: []actions.Step{
-					actions.MakeCheckoutStep(),
-					languages.MakeSetupGoStep(),
-					fetchGenerator,
-					{
-						Run:  fmt.Sprintf("cd %s && go install -v .", generatorLocation),
-						Name: "Install ci-config-gen",
-					},
-					{
-						Run:  "ci-config-gen --repo-root .",
-						Name: "Run co-config-gen",
-					},
-					{
-						Name: "Verify CI configuration is up-to-date",
-						Run:  "git diff --exit-code",
-					},
-				},
-			},
-		},
+		Jobs: jobs,
 	}
 
 }
