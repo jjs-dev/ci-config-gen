@@ -9,13 +9,8 @@ import (
 )
 
 const (
-	CargoUdepsVersion = "0.1.20"
+	CargoUdepsVersion = "0.1.21"
 )
-
-/*
-type rustConfig struct {
-
-}*/
 
 type langRust struct{}
 
