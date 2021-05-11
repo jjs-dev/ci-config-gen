@@ -22,7 +22,7 @@ func MakeSetupGoStep() actions.Step {
 		Name: "Install golang",
 		Uses: "actions/setup-go@v2",
 		With: map[string]string{
-			"go-version": "1.16.3",
+			"go-version": "1.16.4",
 		},
 	}
 }
