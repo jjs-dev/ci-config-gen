@@ -1,4 +1,5 @@
-noPublish: true
 noE2e: true
 buildTimeoutMinutes: 5
 internalHackForGenerator: true
+dockerImages:
+  - ci-config-gen
