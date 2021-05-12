@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/jjs-dev/ci-config-gen/actions"
+	"github.com/jjs-dev/ci-config-gen/bors"
 	"github.com/jjs-dev/ci-config-gen/config"
 )
 
@@ -19,6 +20,9 @@ then
 elif [ "$GITHUB_REF" = "refs/heads/trying" ]
 then
   TAG="dev"
+elif [ "$GITHUB_REF" = "refs/heads/staging" ]
+then
+  exit 0
 else
   echo "unknown GITHUB_REF: $GITHUB_REF"
   exit 1
@@ -34,7 +38,7 @@ echo $GITHUB_TOKEN | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin`
 	return strings.Join(lines, "\n")
 }
 
-func makePublishWorkflow(root string, config config.CiConfig) actions.Workflow {
+func makePublishWorkflow(root string, config config.CiConfig, bc *bors.BorsConfig) actions.Workflow {
 	publishJob := actions.Job{
 		RunsOn:  actions.UbuntuRunner,
 		If:      "github.event_name == 'push'",
@@ -67,6 +71,8 @@ func makePublishWorkflow(root string, config config.CiConfig) actions.Workflow {
 			"publish": publishJob,
 		},
 	}
+
+	bc.AddJob("publish")
 
 	return w
 }

@@ -74,7 +74,7 @@ func main() {
 
 	if !config.NoPublish {
 		log.Println("Generating publish workflow")
-		publishWorkflow := makePublishWorkflow(*repoRoot, config)
+		publishWorkflow := makePublishWorkflow(*repoRoot, config, borsConfig)
 		writeWorkflow(*out, publishWorkflow)
 		script := generatePublishImageScript(config)
 		emitFile(*out, "ci/publish-images.sh", []byte(script))
