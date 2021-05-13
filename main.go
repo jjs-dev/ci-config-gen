@@ -180,6 +180,7 @@ func makeCiE2eJob(root string, config config.CiConfig, languages []languages.Lan
 	}, actions.Step{
 		Name: "Upload e2e artifacts",
 		Uses: "actions/upload-artifact@v2",
+		If:   "always()",
 		With: map[string]string{
 			"name":           "e2e-artifacts",
 			"path":           "e2e-artifacts",
