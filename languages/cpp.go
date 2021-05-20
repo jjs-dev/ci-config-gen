@@ -83,6 +83,10 @@ func (langCpp) Make(repoRoot string, config config.CiConfig) JobSet {
 	}
 }
 
+func (langCpp) WriteAdditionalFiles(repoRoot string) error {
+	return nil
+}
+
 func makeLanguageForCpp() Language {
 	return langCpp{}
 }

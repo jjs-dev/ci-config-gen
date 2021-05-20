@@ -14,6 +14,7 @@ type Language interface {
 	Used(repoRoot string) bool
 	Make(repoRoot string, config config.CiConfig) JobSet
 	MakeE2eCacheStep() (bool, actions.Step)
+	WriteAdditionalFiles(repoRoot string) error
 }
 
 func MakeLanguages() []Language {
