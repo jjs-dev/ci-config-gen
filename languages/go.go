@@ -69,6 +69,10 @@ func (langGo) MakeE2eCacheStep() (bool, actions.Step) {
 	return false, actions.Step{}
 }
 
+func (langGo) WriteAdditionalFiles(repoRoot string) error {
+	return nil
+}
+
 func makeLanguageForGo() Language {
 	return langGo{}
 }

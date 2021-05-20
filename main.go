@@ -69,6 +69,14 @@ func main() {
 
 	langs := languages.MakeLanguages()
 
+	for _, lang := range langs {
+		log.Printf("Generating files for lang %s\n", lang.Name())
+		err = lang.WriteAdditionalFiles(*repoRoot)
+		if err != nil {
+			log.Fatalf("failed to write additional files: %v", err)
+		}
+	}
+
 	ciWorkflow := makeCiWorkflow(langs, config, *repoRoot, borsConfig)
 	writeWorkflow(*out, ciWorkflow)
 

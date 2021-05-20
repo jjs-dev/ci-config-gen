@@ -2,6 +2,7 @@ package languages
 
 import (
 	"fmt"
+	"os"
 	"path"
 
 	"github.com/jjs-dev/ci-config-gen/actions"
@@ -153,6 +154,30 @@ cargo udeps
 			},
 		},
 	}
+}
+
+func (langRust) WriteAdditionalFiles(repoRoot string) error {
+	rustfmtConfig := `
+# GENERATED FILE
+
+imports_granularity = "Crate"
+force_explicit_abi = true
+reorder_imports = true
+reorder_modules = true
+reorder_impl_items = true
+use_field_init_shorthand = true
+format_code_in_doc_comments = true
+edition = "2018"
+merge_derives = true
+newline_style = "Unix"
+report_fixme = "Unnumbered"
+unstable_features = true
+version = "Two"
+`
+
+	rustfmtCfgPath := path.Join(repoRoot, "rustfmt.toml")
+
+	return os.WriteFile(rustfmtCfgPath, []byte(rustfmtConfig), 0o755)
 }
 
 func makeLanguageForRust() Language {
