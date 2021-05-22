@@ -54,7 +54,8 @@ mkdir -p ~/udeps
 cp $( which cargo-udeps ) ~/udeps`
 
 	runCargoUdeps := `
-export PATH=~/udeps:$PATH  
+export PATH=~/udeps:$PATH
+export RUSTC_BOOTSTRAP=1
 cargo udeps 
 `
 
@@ -99,7 +100,7 @@ cargo udeps
 				Timeout: config.JobTimeout,
 				Steps: []actions.Step{
 					actions.MakeCheckoutStep(),
-					makeInstallTooclhainStep("nightly"),
+					makeInstallTooclhainStep("stable"),
 					makeRustCacheStep(),
 					{
 						Name: "Fetch prebuilt cargo-udeps",
